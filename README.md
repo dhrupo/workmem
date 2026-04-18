@@ -12,29 +12,30 @@ Local working-memory and context-compression CLI for AI coding workflows.
 - compresses markdown/text into smaller technical summaries
 - shows repo-local workmem status
 
-## Validation
+## Why Use It
 
-`workmem` has been tested locally against real WPManageNinja repositories:
+`workmem` helps when AI sessions become repetitive, expensive, or hard to continue across multiple iterations.
 
-- `fluentform`
-- `fluent-player`
+Typical benefits:
 
-Live validation covered:
+- reduces repeated prompt context
+- keeps prior findings and decisions locally
+- rechecks what changed between AI runs
+- gives agents a smaller, more focused packet instead of a raw diff dump
 
-- repo initialization with `.workmem/`
-- packet building from committed, staged, worktree, and untracked changes
-- packet token reduction visibility
-- saving a run from generic JSON input
-- rechecking a follow-up markdown report
-- clean-repo behavior with no changed files
+Example compression pattern:
 
-Example live result from `fluentform`:
+- raw diff / notes / repo rules: `~125000` estimated tokens
+- compressed packet: `~421` estimated tokens
 
-- changed files detected: `2`
-- estimated raw diff tokens: about `124980`
-- estimated packet tokens: about `421`
+Simple reduction view:
 
-That means the current packet builder is doing the intended job: compressing a very large branch/worktree context into a much smaller technical packet before it reaches an AI agent.
+```text
+Before  | ################################################## 124980
+After   | # 421
+```
+
+That is roughly a `99%+` reduction for the packet-building stage in a large branch/worktree workflow.
 
 ## Core Idea
 
@@ -125,7 +126,7 @@ This creates:
 ### Build a context packet
 
 ```bash
-workmem build-context --base origin/main --task "Review payment diff"
+workmem build-context --base origin/main --task "Inspect current branch"
 ```
 
 Useful options:
@@ -153,7 +154,7 @@ Default scanning includes:
 Save a JSON report from another tool, or a text/markdown summary:
 
 ```bash
-workmem save-run --input review.json --task "Razorpay review"
+workmem save-run --input report.json --task "Initial analysis"
 ```
 
 By default, `workmem` uses `review` as the run kind. Override it with:
@@ -168,16 +169,16 @@ For JSON input, `workmem` expects a structure like:
 
 ```json
 {
-  "summary": "Payment verification change looks risky.",
+  "summary": "Current branch has a few follow-up issues.",
   "findings": [
     {
       "severity": "important",
       "confidence": "high",
-      "file": "src/Payments/RazorPayProcessor.php",
-      "line": 231,
-      "title": "Fallback amount may break mismatch detection",
-      "evidence": "Verification now prefers base_amount over amount.",
-      "explanation": "This can accept or reject the wrong total when surcharge data is incomplete."
+      "file": "src/example.js",
+      "line": 42,
+      "title": "State change may not handle retry path correctly",
+      "evidence": "Retry flow skips the previous guard.",
+      "explanation": "This can produce duplicate actions in a repeated execution path."
     }
   ]
 }
@@ -198,8 +199,8 @@ For markdown/text reports, `workmem` can extract findings from a section like:
 ```md
 ## Findings
 
-- [important] buglist.md:1 Local bug notes should not ship accidentally
-- [low] assets/js/fluent_gutenblock.js:1 Rebuild note should mention the matching source file
+- [important] src/example.js:42 Retry path may skip the previous guard
+- [low] README.md:12 Installation note should mention the environment requirement
 ```
 
 ### Recheck against the previous run
@@ -268,7 +269,7 @@ workmem build-context --task "Review current branch"
 3. Save the AI output:
 
 ```bash
-workmem save-run --input review.json --task "Review current branch"
+workmem save-run --input report.json --task "Review current branch"
 ```
 
 This can be output from:
@@ -310,6 +311,18 @@ npm publish
 - better log compression
 - richer finding invalidation rules
 - optional editor and agent integrations
+
+## What Developers Can Do With It
+
+Beyond code review, developers can use `workmem` for:
+
+- debugging loops across multiple AI attempts
+- compressing long logs before sending them to an agent
+- saving architecture or refactor decisions locally
+- reducing repeated repo instructions across sessions
+- comparing two iterations of an investigation
+- building compact task packets for Codex, Claude Code, Cursor, Cline, or other agents
+- keeping branch-specific memory without pushing that memory into git
 
 ## License
 
