@@ -1,0 +1,42 @@
+{
+  "name": "workmem",
+  "version": "0.1.0",
+  "description": "Recheck-backed working memory CLI for AI coding workflows",
+  "main": "lib/index.js",
+  "private": false,
+  "preferGlobal": true,
+  "bin": {
+    "workmem": "bin/workmem.js"
+  },
+  "scripts": {
+    "test": "node test/smoke.js"
+  },
+  "files": [
+    "bin/",
+    "lib/",
+    "README.md",
+    "SETUP.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "ai",
+    "memory",
+    "context",
+    "compression",
+    "cli",
+    "git",
+    "developer-tools"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dhrupo/workmem.git"
+  },
+  "homepage": "https://github.com/dhrupo/workmem#readme",
+  "bugs": {
+    "url": "https://github.com/dhrupo/workmem/issues"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

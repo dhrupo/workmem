@@ -1,0 +1,23 @@
+{
+  "summary": "First review catches one persistent issue and one extra issue.",
+  "findings": [
+    {
+      "severity": "important",
+      "confidence": "high",
+      "file": "lib/packet.js",
+      "line": 42,
+      "title": "Context packet misses stale-memory invalidation note",
+      "evidence": "Packet summary omits any stale-memory classification.",
+      "explanation": "A later run could reuse obsolete findings without an explicit invalidation signal."
+    },
+    {
+      "severity": "medium",
+      "confidence": "medium",
+      "file": "lib/compressor.js",
+      "line": 88,
+      "title": "Aggressive mode may over-strip prose",
+      "evidence": "Aggressive mode removes common articles globally.",
+      "explanation": "That can damage clarity in technical sentences."
+    }
+  ]
+}

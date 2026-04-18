@@ -1,0 +1,23 @@
+{
+  "summary": "Second review keeps one issue and adds a new one.",
+  "findings": [
+    {
+      "severity": "important",
+      "confidence": "high",
+      "file": "lib/packet.js",
+      "line": 42,
+      "title": "Context packet misses stale-memory invalidation note",
+      "evidence": "Packet summary omits any stale-memory classification.",
+      "explanation": "A later run could reuse obsolete findings without an explicit invalidation signal."
+    },
+    {
+      "severity": "low",
+      "confidence": "medium",
+      "file": "README.md",
+      "line": 12,
+      "title": "README should mention WORKMEM_HOME override",
+      "evidence": "Storage section only describes the default path.",
+      "explanation": "Users may need an override when sandboxed or on restricted systems."
+    }
+  ]
+}
