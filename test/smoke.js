@@ -67,6 +67,12 @@ if (!showRun.includes('Run')) {
   throw new Error('show-run output missing header');
 }
 
+const showLatestJson = run(['show-run', '--repo', repo, '--run-id', 'latest', '--format', 'json']);
+const showLatestPayload = JSON.parse(showLatestJson);
+if (!showLatestPayload.id || !Array.isArray(showLatestPayload.findings)) {
+  throw new Error('show-run latest json output missing run payload');
+}
+
 const config = run(['config', '--repo', repo]);
 if (!config.includes('Workmem Config')) {
   throw new Error('config output missing header');
@@ -81,6 +87,11 @@ const compressed = run(['compress', '--input', path.join(repo, 'README.md'), '--
 const compressedJson = JSON.parse(compressed);
 if (compressedJson.reductionPercent < 5) {
   throw new Error(`compress reduction too low: ${compressedJson.reductionPercent}%`);
+}
+
+const cleared = run(['clear', '--repo', repo, '--yes']);
+if (!cleared.includes('Workmem Cleared')) {
+  throw new Error('clear output missing confirmation');
 }
 
 console.log('smoke tests passed');
