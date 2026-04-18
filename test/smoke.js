@@ -39,6 +39,9 @@ if (!packetJson.repo || !packetJson.repo.name) {
 if (typeof packetJson.metrics.reductionPercent !== 'number') {
   throw new Error('packet output missing reduction metrics');
 }
+if (!Array.isArray(packetJson.symbolHotspots)) {
+  throw new Error('packet output missing symbol hotspots');
+}
 
 const saved = run(['save-run', '--repo', repo, '--input', reviewOne, '--task', 'Smoke review']);
 if (!saved.includes('Run Saved')) {
