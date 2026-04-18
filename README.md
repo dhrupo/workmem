@@ -117,6 +117,13 @@ Useful options:
 - `--format text|markdown|json`
 - `--output packet.md`
 
+Default scanning includes:
+
+- committed branch diff vs base
+- staged changes
+- worktree changes
+- untracked files
+
 ### Save a run
 
 Save a JSON report from another tool, or a text/markdown summary:
@@ -142,6 +149,23 @@ For JSON input, `workmem` expects a structure like:
     }
   ]
 }
+```
+
+It also accepts common alternative JSON shapes from other agents, such as:
+
+- `issues`
+- `comments`
+- `observations`
+- `problems`
+- `warnings`
+
+For markdown/text reports, `workmem` can extract findings from a section like:
+
+```md
+## Findings
+
+- [important] buglist.md:1 Local bug notes should not ship accidentally
+- [low] assets/js/fluent_gutenblock.js:1 Rebuild note should mention the matching source file
 ```
 
 ### Recheck against the previous run
