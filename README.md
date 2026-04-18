@@ -1,133 +1,107 @@
 # Workmem
 
-Local working-memory and context-compression CLI for AI coding workflows.
+Recheck-backed working memory for AI coding workflows.
 
-`workmem` is a local-first tool for developers who repeatedly use AI on the same repo, task, or investigation. It helps reduce token waste by compressing context before inference, saving structured run memory after inference, and rechecking old findings before reuse.
+`workmem` is a local CLI that helps reduce token usage before you send context to an AI agent. It does that by:
 
-## What It Does
+- compressing diffs, notes, and repo rules into a smaller context packet
+- saving findings and decisions from previous runs
+- rechecking what changed so you do not resend stale context
 
-- builds compact context packets from git diff, repo rules, and previous runs
-- saves run outputs into local structured memory
-- rechecks new runs against previous findings
-- compresses markdown/text into smaller technical summaries
-- shows repo-local workmem status
+Short version:
 
-## Why Use It
+`Compress context. Remember what matters. Recheck before reuse.`
 
-`workmem` helps when AI sessions become repetitive, expensive, or hard to continue across multiple iterations.
+## Why
 
-Typical benefits:
+When you use AI repeatedly on the same branch, task, or debugging session, most token waste comes from:
 
-- reduces repeated prompt context
-- keeps prior findings and decisions locally
-- rechecks what changed between AI runs
-- gives agents a smaller, more focused packet instead of a raw diff dump
+- sending the same repo instructions again
+- resending large diffs
+- repeating already known findings
+- losing continuity between runs
 
-Example compression pattern:
+`workmem` is a local layer in front of the agent. It builds a smaller packet first, then helps you compare the next run against the last one.
 
-- raw diff / notes / repo rules: `~125000` estimated tokens
-- compressed packet: `~421` estimated tokens
+## Benchmark
 
-Simple reduction view:
+Observed packet-building example from a large branch/worktree workflow:
+
+| Input | Estimated tokens |
+| --- | ---: |
+| Raw diff + notes + repo rules | 124980 |
+| Workmem packet | 421 |
+| Reduction | 99%+ |
+
+Simple view:
 
 ```text
 Before  | ################################################## 124980
 After   | # 421
 ```
 
-That is roughly a `99%+` reduction for the packet-building stage in a large branch/worktree workflow.
-
-## Core Idea
-
-This is not a generic memory database. It is a narrow coding-workflow tool for:
-
-- diffs
-- findings
-- repo rules
-- task summaries
-- logs
-- decisions
-
-The product thesis is:
-
-`Compress context. Remember what matters. Recheck before reuse.`
+This benchmark is for the packet-building stage, not a claim about total model cost in every workflow.
 
 ## Install
-
-Published npm install:
 
 ```bash
 npm install -g workmem
 ```
 
-or without installing globally:
+or run it without a global install:
 
 ```bash
 npx workmem --help
 ```
 
-Development install:
-
-```bash
-git clone https://github.com/dhrupo/workmem.git
-cd workmem
-npm install
-npm link
-```
-
-Now `workmem` should be available globally:
-
-```bash
-workmem --help
-```
-
-## Requirements
+Requirements:
 
 - Node.js 18+
 - `git`
 
-## Storage
+## Quick Start
 
-Workmem stores local state under:
-
-```text
-~/.codex/memories/workmem/
-```
-
-Override this with:
+Inside any git repo:
 
 ```bash
-WORKMEM_HOME=/custom/path/workmem workmem status
+workmem init --base origin/main
+workmem build-context --task "Inspect current branch" --target codex
 ```
 
-Per-repo data is stored separately and keyed by repo path hash.
-
-Repo-local configuration lives in:
-
-```text
-.workmem/config.json
-```
-
-## Commands
-
-### Initialize a repo
+Save an AI run:
 
 ```bash
-workmem init --base origin/dev
+workmem save-run --input report.json --task "Initial analysis"
 ```
 
-This creates:
-
-- `.workmem/config.json`
-- `.workmem/ignore`
-- `.workmem/snapshots/`
-- `.git/info/exclude` entry for `.workmem/`
-
-### Build a context packet
+Recheck the next run:
 
 ```bash
-workmem build-context --base origin/main --task "Inspect current branch"
+workmem recheck --input report-fixed.json
 ```
+
+Show local status:
+
+```bash
+workmem status
+```
+
+## How It Works
+
+### 1. Build a context packet
+
+```bash
+workmem build-context --base origin/main --task "Inspect current branch" --target codex
+```
+
+This collects and compresses:
+
+- branch diff vs base
+- staged changes
+- worktree changes
+- untracked files
+- repo rules like `README.md`, `AGENTS.md`, `CLAUDE.md`
+- previous saved run summaries
 
 Useful options:
 
@@ -136,36 +110,158 @@ Useful options:
 - `--head <ref>`
 - `--staged`
 - `--files a,b,c`
-- `--task "..." `
+- `--task "..."`
 - `--mode balanced|aggressive|terse`
+- `--target generic|codex|claude|cursor`
 - `--max-files 12`
+- `--rank risk|size|recent`
+- `--show-ranking`
 - `--format text|markdown|json`
 - `--output packet.md`
 
-Default scanning includes:
-
-- committed branch diff vs base
-- staged changes
-- worktree changes
-- untracked files
-
-### Save a run
-
-Save a JSON report from another tool, or a text/markdown summary:
+### 2. Save a run
 
 ```bash
 workmem save-run --input report.json --task "Initial analysis"
 ```
 
-By default, `workmem` uses `review` as the run kind. Override it with:
+By default, the run kind is `review`. You can override it:
 
 ```bash
 workmem save-run --input debug.json --kind debug
 workmem save-run --input summary.md --kind summary
 workmem save-run --input decision.json --kind decision
+workmem save-run --input run.json --kind debug --source claude
 ```
 
-For JSON input, `workmem` expects a structure like:
+### 3. Recheck the next run
+
+```bash
+workmem recheck --input report-fixed.json --against latest-same-task
+```
+
+This compares the current run with the previous saved run and classifies:
+
+- fixed findings
+- still-present findings
+- newly introduced findings
+- severity increases
+- severity decreases
+
+You can also compare the latest two saved runs:
+
+```bash
+workmem recheck
+```
+
+Baseline selectors:
+
+- `--against latest`
+- `--against latest-same-kind`
+- `--against latest-same-task`
+- `--against run:<id>`
+
+### 4. Compress a file or note
+
+```bash
+workmem compress --input AGENTS.md --type rules --mode terse
+```
+
+Modes:
+
+- `balanced`
+- `aggressive`
+- `terse`
+
+Types:
+
+- `notes`
+- `logs`
+- `rules`
+- `report`
+
+Compression preserves:
+
+- code fences
+- inline code
+- markdown headings
+
+### 5. Show status
+
+```bash
+workmem status
+```
+
+This shows:
+
+- repo
+- branch
+- commit
+- saved run count
+- saved packet count
+- saved recheck count
+- open findings
+- store size
+- store path
+- latest run summary
+
+### 6. Inspect and maintain memory
+
+List runs:
+
+```bash
+workmem list-runs
+```
+
+Show one run:
+
+```bash
+workmem show-run --run-id <id>
+```
+
+Show repo config:
+
+```bash
+workmem config
+```
+
+Preview cleanup:
+
+```bash
+workmem prune --keep 20 --dry-run
+```
+
+Clear repo memory:
+
+```bash
+workmem clear --yes
+```
+
+## Works With Any AI Agent
+
+`workmem` is not tied to one agent.
+
+It can sit in front of:
+
+- Codex
+- Claude Code
+- Cursor
+- Cline
+- any other agent that you use through files or terminal workflows
+
+Targeted packet renderers are available with:
+
+```bash
+workmem build-context --target codex
+workmem build-context --target claude
+workmem build-context --target cursor
+```
+
+For saved runs, `workmem` accepts:
+
+### JSON inputs
+
+Standard shape:
 
 ```json
 {
@@ -184,7 +280,7 @@ For JSON input, `workmem` expects a structure like:
 }
 ```
 
-It also accepts common alternative JSON shapes from other agents, such as:
+It also accepts common alternative arrays such as:
 
 - `issues`
 - `comments`
@@ -192,9 +288,9 @@ It also accepts common alternative JSON shapes from other agents, such as:
 - `problems`
 - `warnings`
 
-This is intentional: `workmem` is meant to work with outputs from different AI agents, not only one fixed reviewer format.
+### Markdown or text inputs
 
-For markdown/text reports, `workmem` can extract findings from a section like:
+`workmem` can extract findings from a `Findings` section like this:
 
 ```md
 ## Findings
@@ -203,126 +299,71 @@ For markdown/text reports, `workmem` can extract findings from a section like:
 - [low] README.md:12 Installation note should mention the environment requirement
 ```
 
-### Recheck against the previous run
+## Storage
 
-```bash
-workmem recheck --input review-fixed.json
+Global storage:
+
+```text
+~/.codex/memories/workmem/
 ```
 
-This compares the current run against the latest saved run for the repo and classifies:
-
-- fixed findings
-- still-present findings
-- newly introduced findings
-
-If the current input includes a `kind`, or if you pass `--kind`, that kind is preserved during recheck. It is not limited to review-only workflows.
-
-You can also compare the latest two saved runs:
+Override it when needed:
 
 ```bash
-workmem recheck
+WORKMEM_HOME=/custom/path/workmem workmem status
 ```
 
-### Compress a file or stdin
+Repo-local config:
 
-```bash
-workmem compress --input CLAUDE.md --mode terse
+```text
+.workmem/config.json
 ```
 
-Modes:
+Running `workmem init` creates:
 
-- `balanced`
-- `aggressive`
-- `terse`
+- `.workmem/config.json`
+- `.workmem/ignore`
+- `.workmem/snapshots/`
+- `.git/info/exclude` entry for `.workmem/`
 
-Compression preserves:
+## Core Workflow
 
-- code fences
-- inline code
-- markdown headings
-
-### Show status
-
-```bash
-workmem status
-```
-
-Shows:
-
-- current repo/branch/commit
-- saved run count
-- saved finding count
-- saved packet count
-- latest run summary
-
-## Typical Workflow
-
-1. Build a packet from the current repo state:
-
-```bash
-workmem init --base origin/dev
-workmem build-context --task "Review current branch"
-```
-
-2. Run your AI tool with that packet.
-
-3. Save the AI output:
-
-```bash
-workmem save-run --input report.json --task "Review current branch"
-```
-
-This can be output from:
-
-- Codex
-- Claude Code
-- Cursor
-- Cline
-- any other agent, as long as you save either:
-  - a simple JSON report with findings/issues/comments-style arrays
-  - or a markdown/text report with a `Findings` section
-
-4. Fix issues and run the AI again.
-
-5. Recheck the new output:
-
-```bash
-workmem recheck --input review-fixed.json
-```
-
-## npm Release
-
-Before publishing:
-
-```bash
-npm test
-npm pack --dry-run
-```
-
-Then publish:
-
-```bash
-npm publish
-```
-
-## Roadmap
-
-- stronger git-aware freshness checks
-- better log compression
-- richer finding invalidation rules
-- optional editor and agent integrations
+1. `workmem init`
+2. `workmem build-context`
+3. send the packet to your preferred agent
+4. `workmem save-run`
+5. `workmem recheck`
+6. `workmem status`
+7. `workmem prune` when local history grows
 
 ## What Developers Can Do With It
 
-Beyond code review, developers can use `workmem` for:
+Developers can use `workmem` for:
 
+- pre-review context reduction
 - debugging loops across multiple AI attempts
 - compressing long logs before sending them to an agent
 - saving architecture or refactor decisions locally
 - reducing repeated repo instructions across sessions
 - comparing two iterations of an investigation
-- building compact task packets for Codex, Claude Code, Cursor, Cline, or other agents
+- building compact task packets for any coding agent
 - keeping branch-specific memory without pushing that memory into git
+
+## Commands
+
+```bash
+workmem init
+workmem build-context
+workmem save-run
+workmem recheck
+workmem compress
+workmem status
+workmem list-runs
+workmem show-run
+workmem prune
+workmem clear
+workmem config
+```
 
 ## License
 

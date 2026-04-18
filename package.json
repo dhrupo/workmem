@@ -1,6 +1,6 @@
 {
   "name": "workmem",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Recheck-backed working memory CLI for AI coding workflows",
   "main": "lib/index.js",
   "private": false,
