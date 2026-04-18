@@ -12,6 +12,30 @@ Local working-memory and context-compression CLI for AI coding workflows.
 - compresses markdown/text into smaller technical summaries
 - shows repo-local workmem status
 
+## Validation
+
+`workmem` has been tested locally against real WPManageNinja repositories:
+
+- `fluentform`
+- `fluent-player`
+
+Live validation covered:
+
+- repo initialization with `.workmem/`
+- packet building from committed, staged, worktree, and untracked changes
+- packet token reduction visibility
+- saving a run from generic JSON input
+- rechecking a follow-up markdown report
+- clean-repo behavior with no changed files
+
+Example live result from `fluentform`:
+
+- changed files detected: `2`
+- estimated raw diff tokens: about `124980`
+- estimated packet tokens: about `421`
+
+That means the current packet builder is doing the intended job: compressing a very large branch/worktree context into a much smaller technical packet before it reaches an AI agent.
+
 ## Core Idea
 
 This is not a generic memory database. It is a narrow coding-workflow tool for:
@@ -132,6 +156,14 @@ Save a JSON report from another tool, or a text/markdown summary:
 workmem save-run --input review.json --task "Razorpay review"
 ```
 
+By default, `workmem` uses `review` as the run kind. Override it with:
+
+```bash
+workmem save-run --input debug.json --kind debug
+workmem save-run --input summary.md --kind summary
+workmem save-run --input decision.json --kind decision
+```
+
 For JSON input, `workmem` expects a structure like:
 
 ```json
@@ -159,6 +191,8 @@ It also accepts common alternative JSON shapes from other agents, such as:
 - `problems`
 - `warnings`
 
+This is intentional: `workmem` is meant to work with outputs from different AI agents, not only one fixed reviewer format.
+
 For markdown/text reports, `workmem` can extract findings from a section like:
 
 ```md
@@ -179,6 +213,8 @@ This compares the current run against the latest saved run for the repo and clas
 - fixed findings
 - still-present findings
 - newly introduced findings
+
+If the current input includes a `kind`, or if you pass `--kind`, that kind is preserved during recheck. It is not limited to review-only workflows.
 
 You can also compare the latest two saved runs:
 
@@ -234,6 +270,16 @@ workmem build-context --task "Review current branch"
 ```bash
 workmem save-run --input review.json --task "Review current branch"
 ```
+
+This can be output from:
+
+- Codex
+- Claude Code
+- Cursor
+- Cline
+- any other agent, as long as you save either:
+  - a simple JSON report with findings/issues/comments-style arrays
+  - or a markdown/text report with a `Findings` section
 
 4. Fix issues and run the AI again.
 
