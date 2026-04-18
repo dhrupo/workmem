@@ -85,8 +85,11 @@ if (!prune.includes('Prune Preview')) {
 
 const compressed = run(['compress', '--input', path.join(repo, 'README.md'), '--type', 'rules', '--mode', 'balanced', '--format', 'json']);
 const compressedJson = JSON.parse(compressed);
-if (compressedJson.reductionPercent < 5) {
+if (compressedJson.reductionPercent < 15) {
   throw new Error(`compress reduction too low: ${compressedJson.reductionPercent}%`);
+}
+if (compressedJson.output.includes('Avoid resend')) {
+  throw new Error('compress output still contains broken sentence rewrites');
 }
 
 const cleared = run(['clear', '--repo', repo, '--yes']);
